@@ -1,0 +1,76 @@
+name: Build BitDsk Firmware
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.1
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Show project files
+      run: |
+        echo "=== Current directory ==="
+        pwd
+        echo ""
+        echo "=== Files in repo ==="
+        ls -la
+        echo ""
+        echo "=== Check for CMakeLists.txt ==="
+        test -f CMakeLists.txt && echo "✓ CMakeLists.txt exists" || echo "✗ CMakeLists.txt MISSING"
+        echo ""
+        echo "=== Check for main directory ==="
+        test -d main && echo "✓ main/ exists" && ls -la main/ || echo "✗ main/ MISSING"
+        echo ""
+        echo "=== Check for merge_bin.sh ==="
+        test -f merge_bin.sh && echo "✓ merge_bin.sh exists" || echo "✗ merge_bin.sh MISSING"
+
+    - name: Build firmware
+      run: |
+        echo "=== Starting build ==="
+        idf.py --version
+        idf.py set-target esp32s3
+        idf.py build -v
+        echo "=== Build complete ==="
+
+    - name: Check build output
+      if: always()
+      run: |
+        echo "=== Build artifacts ==="
+        ls -lh build/ | grep -i bin || echo "No .bin files yet"
+        echo ""
+        echo "=== Full build directory ==="
+        du -sh build/
+        find build -name "*.bin" -exec ls -lh {} \;
+
+    - name: Merge binaries
+      run: |
+        echo "=== Running merge_bin.sh ==="
+        chmod +x merge_bin.sh
+        ./merge_bin.sh ./esp-miner-merged.bin
+        echo ""
+        echo "=== Checking result ==="
+        if [ -f esp-miner-merged.bin ]; then
+          ls -lh esp-miner-merged.bin
+          echo "✓ SUCCESS!"
+        else
+          echo "✗ FAILED - binary not created"
+          find . -name "*.bin" 2>/dev/null | head -20
+        fi
+
+    - name: Upload firmware
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: BitDsk-Firmware
+        path: esp-miner-merged.bin
+        retention-days: 90
