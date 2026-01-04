@@ -1,0 +1,45 @@
+name: Build ESP-Miner
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build firmware
+      run: |
+        cd /home/user/project
+        idf.py build
+        
+    - name: Merge binary
+      run: |
+        cd /home/user/project
+        chmod +x merge_bin.sh
+        ./merge_bin.sh ./esp-miner-merged.bin
+        ls -lh esp-miner-merged.bin
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: esp-miner-firmware
+        path: |
+          /home/user/project/esp-miner-merged.bin
+          /home/user/project/config.cvs.example
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          /home/user/project/esp-miner-merged.bin
+          /home/user/project/config.cvs.example
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
