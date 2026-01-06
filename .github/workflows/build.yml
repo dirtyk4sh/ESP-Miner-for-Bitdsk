@@ -1,0 +1,190 @@
+name: Build ESP-Miner Firmware
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.1
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up ESP-IDF environment
+        run: |
+          . /opt/esp/idf/export.sh
+          echo "ESP-IDF environment loaded"
+      
+      - name: Install Node.js for web UI build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Build web UI
+        run: |
+          cd $GITHUB_WORKSPACE/main/http_server/axe-os
+          npm install
+          npm run build
+          echo "Web UI built successfully!"
+      
+      - name: Build firmware
+        run: |
+          . /opt/esp/idf/export.sh
+          cd $GITHUB_WORKSPACE
+          idf.py build
+          echo "Build completed successfully!"
+      
+      - name: List build outputs
+        run: |
+          echo "=== Build Directory Contents ==="
+          ls -lah build/
+          echo ""
+          echo "=== Bootloader ==="
+          ls -lah build/bootloader/
+          echo ""
+          echo "=== Partition Table ==="
+          ls -lah build/partition_table/
+          echo ""
+          echo "=== Main App ==="
+          ls -lah build/ | grep -E "\.bin"
+      
+      - name: Upload firmware binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-binaries
+          path: |
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+            build/esp-miner.bin
+            build/www.bin
+            build/ota_data_initial.bin
+          retention-days: 30
+      
+      - name: Upload complete build directory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-build
+          path: build/
+          retention-days: 30
+      
+      - name: Create firmware package
+        if: success()
+        run: |
+          mkdir -p firmware_package
+          cp build/bootloader/bootloader.bin firmware_package/
+          cp build/partition_table/partition-table.bin firmware_package/
+          cp build/esp-miner.bin firmware_package/
+          cp build/www.bin firmware_package/
+          cp build/ota_data_initial.bin firmware_package/
+          
+          # Create flashing script
+          cat > firmware_package/FLASH.sh << 'EOF'
+          #!/bin/bash
+          # Flash BitDsk D12 Firmware
+          # Usage: ./FLASH.sh <PORT>
+          # Example: ./FLASH.sh /dev/ttyUSB0
+          
+          if [ -z "$1" ]; then
+              echo "Usage: $0 <COM_PORT>"
+              echo "Example: $0 /dev/ttyUSB0 (Linux/Mac) or COM3 (Windows)"
+              exit 1
+          fi
+          
+          PORT=$1
+          BAUD=115200
+          
+          echo "Flashing BitDsk D12 firmware to $PORT"
+          echo "Bootloader at 0x0"
+          echo "Partition table at 0x8000"
+          echo "Application at 0x10000"
+          echo "Web UI at 0x410000"
+          echo ""
+          
+          # Erase flash
+          esptool.py -p $PORT -b $BAUD erase_flash
+          
+          # Flash all binaries
+          esptool.py -p $PORT -b $BAUD write_flash \
+              0x0 bootloader.bin \
+              0x8000 partition-table.bin \
+              0x10000 esp-miner.bin \
+              0x410000 www.bin \
+              0xf10000 ota_data_initial.bin
+          
+          echo "Flash complete! Press RST to boot."
+          EOF
+          
+          chmod +x firmware_package/FLASH.sh
+          
+          # Create Windows batch file
+          cat > firmware_package/FLASH.bat << 'EOF'
+          @echo off
+          REM Flash BitDsk D12 Firmware
+          REM Usage: FLASH.bat COM3
+          
+          if "%1"=="" (
+              echo Usage: %0 COM_PORT
+              echo Example: %0 COM3
+              exit /b 1
+          )
+          
+          set PORT=%1
+          set BAUD=115200
+          
+          echo Flashing BitDsk D12 firmware to %PORT%
+          echo Bootloader at 0x0
+          echo Partition table at 0x8000
+          echo Application at 0x10000
+          echo Web UI at 0x410000
+          echo.
+          
+          REM Erase flash
+          esptool.py -p %PORT% -b %BAUD% erase_flash
+          
+          REM Flash all binaries
+          esptool.py -p %PORT% -b %BAUD% write_flash ^
+              0x0 bootloader.bin ^
+              0x8000 partition-table.bin ^
+              0x10000 esp-miner.bin ^
+              0x410000 www.bin ^
+              0xf10000 ota_data_initial.bin
+          
+          echo Flash complete! Press RST to boot.
+          pause
+          EOF
+          
+          ls -lah firmware_package/
+      
+      - name: Upload firmware package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-package
+          path: firmware_package/
+          retention-days: 30
+      
+      - name: Build summary
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "Build Status: ${{ job.status }}"
+          echo "=========================================="
+          if [ "${{ job.status }}" == "success" ]; then
+              echo "✅ Firmware built successfully!"
+              echo ""
+              echo "Artifacts available:"
+              echo "  - firmware-binaries: Individual .bin files"
+              echo "  - complete-build: Full build directory"
+              echo "  - firmware-package: Ready-to-flash package with scripts"
+          else
+              echo "❌ Build failed. Check logs above."
+          fi
