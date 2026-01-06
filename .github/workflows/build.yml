@@ -33,11 +33,12 @@ jobs:
           npm install
           npm run build
           echo "Web UI built successfully!"
-      
+          
       - name: Build firmware
         run: |
           . /opt/esp/idf/export.sh
           cd $GITHUB_WORKSPACE
+          idf.py set-target esp32s3
           idf.py build
           echo "Build completed successfully!"
       
