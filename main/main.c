@@ -16,6 +16,8 @@
 #include "serial.h"
 #include "stratum_task.h"
 #include "user_input_task.h"
+#define ASIC_SCAN_INTERVAL_MS 100
+#define NONCE_SPACE 0x100000000ULL
 
 static GlobalState GLOBAL_STATE = {.extranonce1 = NULL, .extranonce2_size = 0, .abandon_work = 0, .version_mask = 0,.board_ip=NULL,.board_gw=NULL, .last_mining_notify_time = 0};
 
