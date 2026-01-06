@@ -238,7 +238,7 @@ void STRATUM_V1_parse(StratumApiV1Message * message, const char * stratum_json)
         // params can be varible length
         int paramsLength = cJSON_GetArraySize(params);
         int value = cJSON_IsTrue(cJSON_GetArrayItem(params, paramsLength - 1));
-        message->clean_jobs = value;
+        message->should_abandon_work = value;
     } else if (message->method == MINING_SET_DIFFICULTY) {
         cJSON * params = cJSON_GetObjectItem(json, "params");
         uint32_t difficulty = cJSON_GetArrayItem(params, 0)->valueint;
