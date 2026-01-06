@@ -71,7 +71,7 @@ void app_main(void)
                                         .set_max_baud_fn = BM1366_set_max_baud,
                                         .set_difficulty_mask_fn = BM1366_set_job_difficulty_mask,
                                         .send_work_fn = BM1366_send_work};
-        GLOBAL_STATE.asic_job_frequency_ms = BM1366_FULLSCAN_MS;
+        GLOBAL_STATE.asic_job_frequency_ms = ASIC_SCAN_INTERVAL_MS;
 
         GLOBAL_STATE.ASIC_functions = ASIC_functions;
     } else if (strcmp(GLOBAL_STATE.asic_model, "BM1397") == 0) {
@@ -213,7 +213,7 @@ void app_main(void)
 void MINER_set_wifi_status(wifi_status_t status, uint16_t retry_count)
 {
     if (status == WIFI_RETRYING) {
-        snprintf(GLOBAL_STATE.SYSTEM_MODULE.wifi_status, 20, "Retrying: %d/%d", retry_count, WIFI_MAXIMUM_RETRY);
+        snprintf(GLOBAL_STATE.SYSTEM_MODULE.wifi_status, 20, "Retrying: %d/%d", retry_count, CONFIG_ESP_MAXIMUM_RETRY);
         return;
     } else if (status == WIFI_CONNECT_FAILED) {
         snprintf(GLOBAL_STATE.SYSTEM_MODULE.wifi_status, 20, "Connect Failed!");
