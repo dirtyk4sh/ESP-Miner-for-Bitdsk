@@ -111,8 +111,7 @@ void stratum_task(void * pvParameters)
         }
         ESP_LOGI(TAG, "Socket connect success,so sendding...subscribe");
         // send mining.subscribe  get extranonce1  extranonce2_size
-        STRATUM_V1_subscribe(GLOBAL_STATE->sock, &GLOBAL_STATE->extranonce1, &GLOBAL_STATE->extranonce2_size,
-                             nvs_config_get_string(NVS_CONFIG_BOARD_VERSION, "1.0"));
+        STRATUM_V1_subscribe(GLOBAL_STATE->sock, "bitdsk_d12");
 
         // mining.configure
         STRATUM_V1_configure_version_rolling(GLOBAL_STATE->sock, &GLOBAL_STATE->version_mask);
