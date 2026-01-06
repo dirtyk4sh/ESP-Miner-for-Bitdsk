@@ -35,7 +35,7 @@ void create_jobs_task(void * pvParameters)
                                                                 mining_notification->n_merkle_branches);
 
                 /////////////////////
-                bm_job next_job = construct_bm_job(mining_notification, merkle_root, GLOBAL_STATE->version_mask,extranonce_2_str);
+                bm_job next_job = construct_bm_job(mining_notification, merkle_root, GLOBAL_STATE->version_mask);
 
                 bm_job * queued_next_job = malloc(sizeof(bm_job));
                 memcpy(queued_next_job, &next_job, sizeof(bm_job));
