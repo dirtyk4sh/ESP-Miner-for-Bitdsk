@@ -121,11 +121,7 @@ void app_main(void)
     
 
     // init and connect to wifi
-    wifi_init(wifi_ssid, wifi_pass,hostname,
-            GLOBAL_STATE.board_ip,GLOBAL_STATE.board_gw,
-            GLOBAL_STATE.staticipopen,GLOBAL_STATE.staticip,GLOBAL_STATE.staticnetmask,GLOBAL_STATE.staticopengw,
-            dnsmain,dnsbackup,dnsfallback
-            );
+    wifi_init(wifi_ssid, wifi_pass, hostname);
     start_rest_server((void *) &GLOBAL_STATE);
     EventBits_t result_bits = wifi_connect();
 
