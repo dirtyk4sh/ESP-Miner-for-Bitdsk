@@ -1,0 +1,44 @@
+name: Build BitDsk Firmware
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Build with ESP-IDF
+        run: |
+          . /opt/esp/idf/export.sh
+          idf.py build
+      
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: firmware-build
+          path: |
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+            build/esp-miner.bin
+            build/www.bin
+            build/ota_data_initial.bin
+          retention-days: 30
+      
+      - name: Upload full build directory
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-directory
+          path: build/
+          retention-days: 30
