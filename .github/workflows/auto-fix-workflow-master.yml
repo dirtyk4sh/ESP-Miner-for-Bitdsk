@@ -1,0 +1,46 @@
+name: Auto-Fix Compilation Errors
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-errors:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Search for errors
+        id: search
+        run: |
+          echo "=== Searching for compilation errors ==="
+          grep -rn "construct_bm_job.*extranonce_2_str" --include="*.c" . || echo "construct_bm_job: Not found"
+          grep -rn "STRATUM_V1_subscribe.*extranonce1" --include="*.c" . || echo "STRATUM_V1_subscribe: Not found"
+          grep -rn "BM1366_FULLSCAN_MS" --include="*.c" . || echo "BM1366_FULLSCAN_MS: Not found"
+          grep -rn "WIFI_MAXIMUM_RETRY" --include="*.c" . || echo "WIFI_MAXIMUM_RETRY: Not found"
+          grep -rn "should_abandon_work" --include="*.c" . || echo "should_abandon_work: Not found"
+      
+      - name: Apply fixes
+        run: |
+          echo "=== Applying fixes ==="
+          find . -name "*.c" -type f -exec sed -i 's/BM1366_FULLSCAN_MS/ASIC_SCAN_INTERVAL_MS/g' {} +
+          find . -name "*.c" -type f -exec sed -i 's/WIFI_MAXIMUM_RETRY/CONFIG_ESP_MAXIMUM_RETRY/g' {} +
+          find . -name "*.c" -type f -exec sed -i 's/should_abandon_work/clean_jobs/g' {} +
+          echo "=== Fixes applied ==="
+      
+      - name: Configure git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      - name: Commit and push changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "fix: resolve compilation errors in BitDsk firmware"
+            git push origin master
+            echo "✓ Changes committed and pushed to master"
+          else
+            echo "✓ No changes to commit"
+          fi
